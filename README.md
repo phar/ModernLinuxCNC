@@ -12,20 +12,12 @@ install, had to install from CD, unetbootin didnt work:<br>
 http://releases.ubuntu.com/bionic/ubuntu-18.04.2-desktop-amd64.iso
 <pre>
 <br>
-Linux 4.13.13, reported to work per  original post<br><br>
-<pre>
-export LINUX_VER=4.13.13
-export RT_VER=rt5
-wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-$LINUX_VER.tar.gz
-wget https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/4.13/patch-$LINUX_VER-$RT_VER.patch.gz
-gzip -cd ~/patch-$LINUX_VER-$RT_VER.patch.gz > patch-$LINUX_VER.patch
-</pre>
-<br>
 
 Linux 4.18.16, closer to the ubuntu stock kernel version for this distribution<br>
 <pre>
 export LINUX_VER=4.18.16
 export RT_VER=rt9
+cd ~
 wget https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/4.18/patch-$LINUX_VER-$RT_VER.patch.gz
 wget https://mirrors.edge.kernel.org/pub/linux/kernel/v4.x/linux-$LINUX_VER.tar.gz
 gzip -cd ~/patch-$LINUX_VER-$RT_VER.patch.gz > patch-$LINUX_VER.patch
@@ -36,26 +28,24 @@ dependencies<br>
 <pre>
 sudo apt-get update
 Sudo apt-get upgrade
-sudo apt-get install git devscripts build-essential imagemagick tcl8.6-dev tk8.6-dev libxaw7-dev libncurses-dev python-dev python-tk libglu1-mesa-dev libgtk2.0-dev source-highlight libboost-python-dev debhelper libmodbus-dev dvipng libusb-1.0-0-dev inkscape python-numpy python-imaging-tk python-gtkglext1 blt bwidget libtk-img tclx libudev-dev python-vte libqt4-dev gssproxy python-pil libxenomai-dev git python-vte libssl-dev yapps2  intltool libreadline-gplv2-dev bison flex
+sudo apt-get install git devscripts build-essential imagemagick tcl8.6-dev tk8.6-dev libxaw7-dev libncurses-dev python-dev python-tk libglu1-mesa-dev libgtk2.0-dev source-highlight libboost-python-dev debhelper libmodbus-dev dvipng libusb-1.0-0-dev inkscape python-numpy python-imaging-tk python-gtkglext1 blt bwidget libtk-img tclx libudev-dev python-vte libqt4-dev gssproxy python-pil libxenomai-dev git python-vte libssl-dev yapps2  intltool libreadline-gplv2-dev bison flex  libelf-dev python-gi screen  kernel-package fakeroot libncurses5-dev ccache
 </pre>
 
 <br>
 Patch <br>
 <pre>
-cd /usr/src
 Then unpack the archives in this directory, in the terminal we write:
-sudo tar -xzvf ~/linux-$LINUX_VER.tar.gz
-sudo ln -s linux-$LINUX_VER linux
+tar -xzvf ~/linux-$LINUX_VER.tar.gz
 cd linux-$LINUX_VER
-sudo cp ~/patch-$LINUX_VER.patch .
-sudo patch -p1 --verbose < patch-$LINUX_VER.patch
+cp ~/patch-$LINUX_VER.patch .
+patch -p1 --verbose < patch-$LINUX_VER.patch
 </pre>
 <br>
 
 configure<br>
 <pre>
-sudo cp /boot/config-4.18.0-15-generic .config
-sudo make oldconfig
+cp /boot/config-`uname -r` .config
+make oldconfig
 make menuconfig
 
 Processor type and features -> Preemption Model (Fully Preemptible Kernel (RT))
@@ -78,12 +68,16 @@ Then click save and exit.<br>
 
 Compile the kernel for this in the terminal:<br>
 <pre>
-sudo make -j4 
-sudo make modules_install -j4
-sudo make install -j4
-
-sudo update-grub
+fakeroot make-kpkg -j `getconf _NPROCESSORS_ONLN` --initrd --append-to-version=-linuxcnc kernel_image kernel_headers
 </pre>
+
+install compiled kerenl:
+<pre>
+cd /usr/src
+sudo dpkg -i linux-image-$LINUX_VER-linuxcnc*.deb 
+sudo dpkg -i linux-headers-$LINUX_VER-linuxcnc*.deb 
+</pre>
+
 <br>
 Reboot the computer<br>
 <pre>
@@ -92,10 +86,15 @@ git clone https://github.com/LinuxCNC/linuxcnc.git linuxcnc-dev
 cd linuxcnc-dev/src
 ./autogen.sh
 ./configure --with-realtime=uspace
-make -j4
+make -j`getconf _NPROCESSORS_ONLN`
 sudo make setuid
 source linuxcnc-dev/scripts/rip-environment
 </pre>
+
+configure linux CNC using stepconf and place linuxcnc icon on desktop<br>
+you should now have a modern realtime linux suitable for use with your linuxcnc machine which shoulf be maintainable using ubuntu's
+current package repos, I dont know why linuxcnc doesnt provide live images for this<br>
+
 
 <br>
 opencv for vision systems, you probably dont need this
